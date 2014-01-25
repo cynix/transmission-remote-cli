@@ -765,6 +765,11 @@ class Transmission:
         elif priority >= 1:  return 'high'
         return '?'
 
+    def rename_path(self, torrent_id, old_path, new_name):
+        request = TransmissionRequest(self.host, self.port, self.path, 'torrent-rename-path', 1, {'ids': torrent_id, 'path': old_path, 'name': new_name})
+        request.send_request()
+        self.wait_for_details_update()
+
     def wait_for_torrentlist_update(self):
         self.wait_for_update(7)
     def wait_for_details_update(self):
@@ -926,6 +931,7 @@ class Interface:
             ord('C'):               self.toggle_compact_torrentlist,
             ord('h'):               self.file_pritority_or_switch_details,
             curses.KEY_LEFT:        self.file_pritority_or_switch_details,
+            ord('M'):               self.rename_path,
             ord(' '):               self.space_key,
             ord('a'):               self.a_key,
             ord('A'):               self.A_key,
@@ -1541,6 +1547,16 @@ class Interface:
                 else:
                     self.scrollpos_detaillist = 0
                     self.prev_details()
+
+    def rename_path(self, c):
+        if self.selected_torrent > -1 and self.details_category_focus == 1 and self.focus_detaillist > -1:
+            file_id = self.file_index_map[self.focus_detaillist]
+            old_path = self.torrent_details['files'][file_id]['name']
+            old_name = os.path.basename(old_path)
+            msg = 'Rename "%s" to' % (old_name,)
+            new_name = self.dialog_input_text(msg, old_name)
+            if new_name and new_name != old_name:
+                server.rename_path(self.torrents[self.focus]['id'], old_path, new_name)
 
     def select_unselect_file(self, c):
         if self.selected_torrent > -1 and self.details_category_focus == 1 and self.focus_detaillist >= 0:
